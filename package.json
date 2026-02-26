@@ -1,0 +1,23 @@
+{
+  "name": "mermaid-viewer-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @mermaid-viewer/shared && npm run build --workspace @mermaid-viewer/cli && npm run build --workspace @mermaid-viewer/viewer",
+    "typecheck": "npm run typecheck --workspace @mermaid-viewer/shared && npm run typecheck --workspace @mermaid-viewer/cli && npm run typecheck --workspace @mermaid-viewer/viewer",
+    "test": "npm run test --workspace @mermaid-viewer/shared && npm run test --workspace @mermaid-viewer/cli && npm run test --workspace @mermaid-viewer/viewer",
+    "mmdv": "node packages/cli/dist/index.js",
+    "viewer:dev": "npm run dev --workspace @mermaid-viewer/viewer"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.13.10",
+    "@types/pako": "^2.0.4",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.8"
+  }
+}

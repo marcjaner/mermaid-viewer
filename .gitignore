@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+.playwright
+*.log
+.npm-cache
+.agent-browser
+.codex
+.claude

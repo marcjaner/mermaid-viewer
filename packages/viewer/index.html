@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mermaid Viewer</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="panel">
+        <header class="panel-header">
+          <h1>Mermaid Viewer</h1>
+          <button id="ui-theme-toggle" class="mode-toggle" type="button" aria-label="Toggle color mode">
+            Toggle mode
+          </button>
+        </header>
+        <label class="field">
+          <span>Diagram source</span>
+          <textarea id="diagram-input" rows="14"></textarea>
+        </label>
+
+        <div class="grid">
+          <label class="field">
+            <span>Theme</span>
+            <select id="theme-select">
+              <option value="default">default</option>
+              <option value="neutral">neutral</option>
+              <option value="dark">dark</option>
+              <option value="forest">forest</option>
+              <option value="base">base</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Theme variables (JSON)</span>
+            <textarea id="theme-variables-input" rows="5" placeholder='{"primaryColor":"#2563eb"}'></textarea>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Custom CSS</span>
+          <textarea id="css-input" rows="5" placeholder=".node rect { rx: 6px; }"></textarea>
+        </label>
+
+        <div class="actions">
+          <button id="render-button" type="button">Render</button>
+          <button id="copy-url-button" type="button">Copy Share URL</button>
+        </div>
+
+        <p id="status" class="status"></p>
+      </section>
+
+      <section class="canvas-wrap">
+        <div id="canvas-viewport" class="canvas-viewport">
+          <div id="graph" class="canvas"></div>
+          <div class="canvas-controls">
+            <button id="zoom-in-button" type="button" aria-label="Zoom in">+</button>
+            <button id="zoom-out-button" type="button" aria-label="Zoom out">-</button>
+            <button id="fit-button" type="button">Fit</button>
+            <button id="reset-button" type="button">Reset</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

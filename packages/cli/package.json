@@ -1,0 +1,25 @@
+{
+  "name": "@mermaid-viewer/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "mmdv": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && vitest run"
+  },
+  "dependencies": {
+    "@mermaid-viewer/shared": "file:../shared",
+    "commander": "^13.1.0",
+    "js-yaml": "^4.1.0",
+    "mermaid": "^11.4.1",
+    "playwright": "^1.50.1"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@mermaid-viewer/viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mermaid-viewer/shared": "file:../shared",
+    "mermaid": "^11.4.1",
+    "svg-pan-zoom": "^3.6.2"
+  },
+  "devDependencies": {
+    "vite": "^6.1.1"
+  }
+}
