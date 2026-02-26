@@ -39,6 +39,7 @@ const createPanZoom = svgPanZoom as unknown as (
 
 const UI_THEME_KEY = "mmdv.uiTheme";
 const UI_THEME_QUERY = "ui-theme";
+const SIDEBAR_COLLAPSED_KEY = "mmdv.sidebarCollapsed";
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 16;
 const BUTTON_ZOOM_FACTOR = 1.35;
@@ -50,6 +51,7 @@ const DEFAULT_DIAGRAM = `flowchart TD
   CLI --> Viewer[Viewer URL]
   CLI --> Artifact[SVG/PNG Artifact]`;
 
+const mainLayoutEl = getElement<HTMLElement>("main-layout");
 const inputEl = getElement<HTMLTextAreaElement>("diagram-input");
 const themeSelectEl = getElement<HTMLSelectElement>("theme-select");
 const themeVariablesEl = getElement<HTMLTextAreaElement>("theme-variables-input");
@@ -61,11 +63,13 @@ const copyUrlButtonEl = getElement<HTMLButtonElement>("copy-url-button");
 const downloadSvgButtonEl = getElement<HTMLButtonElement>("download-svg-button");
 const downloadPngButtonEl = getElement<HTMLButtonElement>("download-png-button");
 const uiThemeToggleEl = getElement<HTMLButtonElement>("ui-theme-toggle");
+const sidebarToggleEl = getElement<HTMLButtonElement>("sidebar-toggle");
+const sidebarOpenBtnEl = getElement<HTMLButtonElement>("sidebar-open-btn");
 const zoomInButtonEl = getElement<HTMLButtonElement>("zoom-in-button");
 const zoomOutButtonEl = getElement<HTMLButtonElement>("zoom-out-button");
 const fitButtonEl = getElement<HTMLButtonElement>("fit-button");
 const resetButtonEl = getElement<HTMLButtonElement>("reset-button");
-const statusEl = getElement<HTMLParagraphElement>("status");
+const toastContainerEl = getElement<HTMLDivElement>("toast-container");
 
 let currentUiTheme: UiTheme = "light";
 let hasManualMermaidTheme = false;
@@ -91,6 +95,13 @@ async function initialize(): Promise<void> {
 
   renderButtonEl.addEventListener("click", async () => {
     await renderCurrentDiagram();
+  });
+
+  document.addEventListener("keydown", async (event) => {
+    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault();
+      await renderCurrentDiagram();
+    }
   });
 
   copyUrlButtonEl.addEventListener("click", async () => {
@@ -133,6 +144,32 @@ async function initialize(): Promise<void> {
     applyUiTheme(currentUiTheme);
     syncMermaidThemeWithUi();
     await renderCurrentDiagram();
+  });
+
+  try {
+    if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true") {
+      setSidebarCollapsed(true);
+    }
+  } catch {
+    // Ignore localStorage errors.
+  }
+
+  sidebarToggleEl.addEventListener("click", () => {
+    setSidebarCollapsed(true);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "true");
+    } catch {
+      // Ignore localStorage errors.
+    }
+  });
+
+  sidebarOpenBtnEl.addEventListener("click", () => {
+    setSidebarCollapsed(false);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "false");
+    } catch {
+      // Ignore localStorage errors.
+    }
   });
 
   zoomInButtonEl.addEventListener("click", () => {
@@ -259,6 +296,17 @@ function applyUiTheme(theme: UiTheme): void {
   uiThemeToggleEl.setAttribute("aria-pressed", String(theme === "dark"));
 }
 
+function setSidebarCollapsed(collapsed: boolean): void {
+  if (collapsed) {
+    mainLayoutEl.dataset.sidebarCollapsed = "true";
+  } else {
+    delete mainLayoutEl.dataset.sidebarCollapsed;
+  }
+  setTimeout(() => {
+    fitAndCenterInitialView();
+  }, 300);
+}
+
 function syncMermaidThemeWithUi(): void {
   if (hasManualMermaidTheme) {
     return;
@@ -299,6 +347,7 @@ async function renderCurrentDiagram(): Promise<void> {
     return;
   }
 
+  const renderId = `graph-${Date.now()}`;
   try {
     mermaid.initialize({
       startOnLoad: false,
@@ -308,13 +357,18 @@ async function renderCurrentDiagram(): Promise<void> {
       ...styleProfile.mermaidConfig
     });
 
-    const rendered = await mermaid.render(`graph-${Date.now()}`, source);
+    const rendered = await mermaid.render(renderId, source);
     const svg = injectCss(rendered.svg, styleProfile.css);
     graphEl.innerHTML = svg;
     initializePanZoom();
     await updateUrlState();
     setStatus("Rendered.", false);
   } catch (error) {
+    graphEl.innerHTML = "";
+    // Mermaid creates a hidden wrapper div with id `d{renderId}` in document.body.
+    // On parse failure it may leave it behind — remove both the wrapper and any direct SVG.
+    document.getElementById(`d${renderId}`)?.remove();
+    document.getElementById(renderId)?.remove();
     const message = error instanceof Error ? error.message : String(error);
     setStatus(`Render failed: ${message}`, true);
   }
@@ -617,8 +671,27 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 function setStatus(message: string, failed: boolean): void {
-  statusEl.textContent = message;
-  statusEl.dataset.failed = String(failed);
+  const toast = document.createElement("div");
+  toast.className = `toast ${failed ? "toast-fail" : "toast-ok"}`;
+  toast.setAttribute("role", "status");
+
+  const iconEl = document.createElement("span");
+  const iconPaths = failed
+    ? '<line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>'
+    : '<polyline points="3 8 6.5 11.5 13 5"/>';
+  iconEl.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths}</svg>`;
+
+  const textEl = document.createElement("span");
+  textEl.textContent = message;
+
+  toast.append(iconEl, textEl);
+  toastContainerEl.append(toast);
+
+  const duration = failed ? 5000 : 3000;
+  setTimeout(() => {
+    toast.classList.add("toast-exit");
+    setTimeout(() => toast.remove(), 220);
+  }, duration);
 }
 
 function clamp(value: number, min: number, max: number): number {

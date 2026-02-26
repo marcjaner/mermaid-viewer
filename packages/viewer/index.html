@@ -7,20 +7,25 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
-    <main class="layout">
+    <main id="main-layout" class="layout">
       <section class="panel">
         <header class="panel-header">
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="Collapse sidebar">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="10 4 6 8 10 12"/>
+            </svg>
+          </button>
           <h1>Mermaid Viewer</h1>
           <button id="ui-theme-toggle" class="mode-toggle" type="button" aria-label="Toggle color mode">
             Toggle mode
           </button>
         </header>
-        <label class="field">
-          <span>Diagram source</span>
-          <textarea id="diagram-input" rows="14"></textarea>
-        </label>
+        <div class="panel-body">
+          <label class="field field--grow">
+            <span>Diagram source</span>
+            <textarea id="diagram-input"></textarea>
+          </label>
 
-        <div class="grid">
           <label class="field">
             <span>Theme</span>
             <select id="theme-select">
@@ -31,28 +36,43 @@
               <option value="base">base</option>
             </select>
           </label>
-          <label class="field">
-            <span>Theme variables (JSON)</span>
-            <textarea id="theme-variables-input" rows="5" placeholder='{"primaryColor":"#2563eb"}'></textarea>
-          </label>
+
+          <details class="collapsible-field">
+            <summary>
+              <span>Theme variables (JSON)</span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="4 6 8 10 12 6"/>
+              </svg>
+            </summary>
+            <textarea id="theme-variables-input" rows="5" placeholder='{"primaryColor":"#2563eb"}' aria-label="Theme variables (JSON)"></textarea>
+          </details>
+
+          <details class="collapsible-field">
+            <summary>
+              <span>Custom CSS</span>
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="4 6 8 10 12 6"/>
+              </svg>
+            </summary>
+            <textarea id="css-input" rows="5" placeholder=".node rect { rx: 6px; }" aria-label="Custom CSS"></textarea>
+          </details>
+
+          <div class="actions">
+            <button id="render-button" type="button">Render</button>
+            <button id="copy-url-button" class="btn-secondary" type="button">Copy Share URL</button>
+            <button id="download-svg-button" class="btn-ghost" type="button">Download SVG</button>
+            <button id="download-png-button" class="btn-ghost" type="button">Download PNG</button>
+          </div>
+
         </div>
-
-        <label class="field">
-          <span>Custom CSS</span>
-          <textarea id="css-input" rows="5" placeholder=".node rect { rx: 6px; }"></textarea>
-        </label>
-
-        <div class="actions">
-          <button id="render-button" type="button">Render</button>
-          <button id="copy-url-button" type="button">Copy Share URL</button>
-          <button id="download-svg-button" type="button">Download SVG</button>
-          <button id="download-png-button" type="button">Download PNG</button>
-        </div>
-
-        <p id="status" class="status"></p>
       </section>
 
       <section class="canvas-wrap">
+        <button id="sidebar-open-btn" class="sidebar-open-btn" type="button" aria-label="Open sidebar">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 4 10 8 6 12"/>
+          </svg>
+        </button>
         <div id="canvas-viewport" class="canvas-viewport">
           <div id="graph" class="canvas"></div>
           <div class="canvas-controls">
@@ -64,6 +84,8 @@
         </div>
       </section>
     </main>
+
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
