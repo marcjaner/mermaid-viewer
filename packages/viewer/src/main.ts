@@ -58,6 +58,8 @@ const graphEl = getElement<HTMLDivElement>("graph");
 const viewportEl = getElement<HTMLDivElement>("canvas-viewport");
 const renderButtonEl = getElement<HTMLButtonElement>("render-button");
 const copyUrlButtonEl = getElement<HTMLButtonElement>("copy-url-button");
+const downloadSvgButtonEl = getElement<HTMLButtonElement>("download-svg-button");
+const downloadPngButtonEl = getElement<HTMLButtonElement>("download-png-button");
 const uiThemeToggleEl = getElement<HTMLButtonElement>("ui-theme-toggle");
 const zoomInButtonEl = getElement<HTMLButtonElement>("zoom-in-button");
 const zoomOutButtonEl = getElement<HTMLButtonElement>("zoom-out-button");
@@ -98,6 +100,26 @@ async function initialize(): Promise<void> {
       setStatus("Share URL copied.", false);
     } catch {
       setStatus("Failed to copy URL. Copy it from the address bar.", true);
+    }
+  });
+
+  downloadSvgButtonEl.addEventListener("click", () => {
+    try {
+      downloadSvg();
+      setStatus("SVG downloaded.", false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(`SVG export failed: ${message}`, true);
+    }
+  });
+
+  downloadPngButtonEl.addEventListener("click", async () => {
+    try {
+      await downloadPng();
+      setStatus("PNG downloaded.", false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(`PNG export failed: ${message}`, true);
     }
   });
 
@@ -452,6 +474,146 @@ function injectCss(svg: string, css: string): string {
     return svg;
   }
   return svg.replace(/<svg[^>]*>/, (match) => `${match}<style>${css}</style>`);
+}
+
+function downloadSvg(): void {
+  const { markup } = buildExportSvgPayload();
+  const blob = new Blob([markup], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  try {
+    triggerDownload(url, "diagram.svg");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function downloadPng(): Promise<void> {
+  const payload = buildExportSvgPayload();
+  const svgBlob = new Blob([payload.markup], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  try {
+    const image = await loadImage(svgUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.ceil(payload.width));
+    canvas.height = Math.max(1, Math.ceil(payload.height));
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Failed to create canvas context.");
+    }
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("Failed to encode PNG output."));
+          return;
+        }
+        resolve(blob);
+      }, "image/png");
+    });
+
+    const pngUrl = URL.createObjectURL(pngBlob);
+    try {
+      triggerDownload(pngUrl, "diagram.png");
+    } finally {
+      URL.revokeObjectURL(pngUrl);
+    }
+  } finally {
+    URL.revokeObjectURL(svgUrl);
+  }
+}
+
+function buildExportSvgPayload(): { markup: string; width: number; height: number } {
+  const svg = activeSvgElement ?? graphEl.querySelector("svg");
+  if (!svg) {
+    throw new Error("Nothing to export. Render a diagram first.");
+  }
+
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  const viewportGroup = clone.querySelector<SVGGElement>("g.svg-pan-zoom_viewport");
+  if (viewportGroup) {
+    viewportGroup.removeAttribute("transform");
+  }
+
+  const bounds = getExportBounds(svg);
+  clone.setAttribute("width", String(bounds.width));
+  clone.setAttribute("height", String(bounds.height));
+  clone.style.width = `${bounds.width}px`;
+  clone.style.height = `${bounds.height}px`;
+  clone.style.maxWidth = "none";
+
+  if (!clone.getAttribute("viewBox")) {
+    clone.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`);
+  }
+
+  if (!clone.getAttribute("xmlns")) {
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  }
+  if (!clone.getAttribute("xmlns:xlink")) {
+    clone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+  }
+
+  const markup = new XMLSerializer().serializeToString(clone);
+  return {
+    markup,
+    width: bounds.width,
+    height: bounds.height
+  };
+}
+
+function getExportBounds(svg: SVGSVGElement): { width: number; height: number } {
+  const viewBox = svg.getAttribute("viewBox");
+  if (viewBox) {
+    const parts = viewBox
+      .trim()
+      .split(/[\s,]+/)
+      .map((part) => Number.parseFloat(part));
+    const width = parts.at(2);
+    const height = parts.at(3);
+    if (parts.length === 4 && width !== undefined && height !== undefined && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return { width, height };
+    }
+  }
+
+  try {
+    const content = svg.querySelector<SVGGElement>("g.svg-pan-zoom_viewport") ?? svg.querySelector<SVGGElement>("g") ?? svg;
+    const box = content.getBBox();
+    if (box.width > 0 && box.height > 0) {
+      return { width: box.width, height: box.height };
+    }
+  } catch {
+    // Ignore bbox failures and fallback to client measurements.
+  }
+
+  const rect = svg.getBoundingClientRect();
+  if (rect.width > 0 && rect.height > 0) {
+    return { width: rect.width, height: rect.height };
+  }
+
+  throw new Error("Failed to determine export size.");
+}
+
+function triggerDownload(url: string, filename: string): void {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+}
+
+async function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Failed to load generated SVG."));
+    image.src = url;
+  });
 }
 
 function setStatus(message: string, failed: boolean): void {
